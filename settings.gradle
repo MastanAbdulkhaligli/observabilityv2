@@ -1,0 +1,12 @@
+rootProject.name = 'observability-lib'
+include 'observability-core'
+include 'observability-noop'
+include 'examples'
+include 'examples:pure-java-console'
+findProject(':examples:pure-java-console')?.name = 'pure-java-console'
+include 'examples:pure-java-servlet-embedded-tomcat'
+findProject(':examples:pure-java-servlet-embedded-tomcat')?.name = 'pure-java-servlet-embedded-tomcat'
+include 'examples:spring-boot-demo'
+findProject(':examples:spring-boot-demo')?.name = 'spring-boot-demo'
+include 'observability-slf4j'
+

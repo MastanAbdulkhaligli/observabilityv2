@@ -1,0 +1,26 @@
+plugins {
+    // REQUIRED for the 'api' configuration
+    id 'java-library'
+}
+
+group = 'az.magusframework.components.lib'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Now 'api' will work perfectly
+    api project(':observability-core')
+    api 'org.slf4j:slf4j-api:2.0.16'
+    testRuntimeOnly 'ch.qos.logback:logback-classic:1.5.6'
+//    testImplementation("org.slf4j:slf4j-simple:2.0.16")
+
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+test {
+    useJUnitPlatform()
+}

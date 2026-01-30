@@ -1,0 +1,75 @@
+<configuration>
+
+    <property name="APP_NAME" value="${APP_NAME:-demo-service}"/>
+    <property name="SERVICE_ENV" value="${SERVICE_ENV:-local}"/>
+
+    <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <timestamp><fieldName>timestamp</fieldName></timestamp>
+                <logLevel><fieldName>level</fieldName></logLevel>
+                <loggerName><fieldName>logger</fieldName></loggerName>
+                <threadName><fieldName>thread</fieldName></threadName>
+                <message><fieldName>message</fieldName></message>
+
+                <mdc>
+                    <includeMdcKeyName>trace.id</includeMdcKeyName>
+                    <includeMdcKeyName>trace.span_id</includeMdcKeyName>
+                    <includeMdcKeyName>trace.parent_id</includeMdcKeyName>
+                    <includeMdcKeyName>trace.sampled</includeMdcKeyName>
+                </mdc>
+
+                <mdc>
+                    <includeMdcKeyName>service.name</includeMdcKeyName>
+                    <includeMdcKeyName>service.module</includeMdcKeyName>
+                    <includeMdcKeyName>service.component</includeMdcKeyName>
+                    <includeMdcKeyName>service.env</includeMdcKeyName>
+                    <includeMdcKeyName>service.version</includeMdcKeyName>
+                </mdc>
+
+                <mdc>
+                    <includeMdcKeyName>http.direction</includeMdcKeyName>
+                    <includeMdcKeyName>http.request.method</includeMdcKeyName>
+                    <includeMdcKeyName>http.route</includeMdcKeyName>
+                    <includeMdcKeyName>http.request.path</includeMdcKeyName>
+                    <includeMdcKeyName>http.response.status_code</includeMdcKeyName>
+                    <includeMdcKeyName>http.duration_ms</includeMdcKeyName>
+                    <includeMdcKeyName>http.client.ip</includeMdcKeyName>
+                    <includeMdcKeyName>http.outcome</includeMdcKeyName>
+                </mdc>
+
+                <mdc>
+                    <includeMdcKeyName>error.type</includeMdcKeyName>
+                    <includeMdcKeyName>error.message</includeMdcKeyName>
+                    <includeMdcKeyName>error.layer</includeMdcKeyName>
+                    <includeMdcKeyName>error.kind</includeMdcKeyName>
+                    <includeMdcKeyName>error.code</includeMdcKeyName>
+                </mdc>
+
+                <mdc>
+                    <includeMdcKeyName>correlation.id</includeMdcKeyName>
+                    <includeMdcKeyName>correlation.baggage</includeMdcKeyName>
+                    <includeMdcKeyName>magus.comp_id</includeMdcKeyName>
+                    <includeMdcKeyName>magus.request_number</includeMdcKeyName>
+                </mdc>
+
+                <mdc>
+                    <includeMdcKeyName>host.name</includeMdcKeyName>
+                    <includeMdcKeyName>host.ip</includeMdcKeyName>
+                    <includeMdcKeyName>k8s.node.name</includeMdcKeyName>
+                    <includeMdcKeyName>context.layer</includeMdcKeyName>
+                    <includeMdcKeyName>context.operation</includeMdcKeyName>
+                    <includeMdcKeyName>context.db_operation</includeMdcKeyName>
+                </mdc>
+
+                <stackTrace><fieldName>exception_stack</fieldName></stackTrace>
+
+            </providers>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="JSON_CONSOLE" />
+    </root>
+
+</configuration>

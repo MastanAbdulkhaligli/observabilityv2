@@ -1,0 +1,50 @@
+plugins {
+    id 'java'
+}
+
+// Updated to match your new branding
+group = 'az.magusframework.components'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // UPGRADED: 8.0+ is required for <unwrapper> and DotNotationUnwrapper
+    implementation 'net.logstash.logback:logstash-logback-encoder:8.0'
+
+    // Logback (Compatible version)
+    implementation 'ch.qos.logback:logback-classic:1.5.6'
+
+    // Core observability modules
+    implementation project(':observability-core')
+    implementation project(':observability-aspectj')
+
+    // Jackson for Magus ID extraction
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
+
+    // Spring & Jakarta (Provided by the host application)
+    compileOnly 'org.springframework:spring-web:6.1.12'
+    compileOnly 'org.springframework:spring-webmvc:6.1.12'
+    compileOnly 'org.springframework:spring-context:6.1.12'
+    compileOnly 'jakarta.servlet:jakarta.servlet-api:6.0.0'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok:1.18.32'
+    annotationProcessor 'org.projectlombok:lombok:1.18.32'
+
+    // Recommended for testing your new ErrorClassifier
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+}

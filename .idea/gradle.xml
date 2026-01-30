@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="GradleSettings">
+    <option name="linkedExternalProjectsSettings">
+      <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="gradleHome" value="" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/examples" />
+            <option value="$PROJECT_DIR$/examples/pure-java-console" />
+            <option value="$PROJECT_DIR$/examples/pure-java-servlet-embedded-tomcat" />
+            <option value="$PROJECT_DIR$/examples/spring-boot-demo" />
+            <option value="$PROJECT_DIR$/observability-core" />
+            <option value="$PROJECT_DIR$/observability-noop" />
+            <option value="$PROJECT_DIR$/observability-slf4j" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+    </option>
+  </component>
+</project>
