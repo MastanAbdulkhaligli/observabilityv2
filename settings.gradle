@@ -11,4 +11,5 @@ findProject(':examples:spring-boot-demo')?.name = 'spring-boot-demo'
 include 'observability-slf4j'
 include 'observability-otel'
 include 'observability-aspectj'
+include 'observability-servlet'
 

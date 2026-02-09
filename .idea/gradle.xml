@@ -16,6 +16,7 @@
             <option value="$PROJECT_DIR$/observability-core" />
             <option value="$PROJECT_DIR$/observability-noop" />
             <option value="$PROJECT_DIR$/observability-otel" />
+            <option value="$PROJECT_DIR$/observability-servlet" />
             <option value="$PROJECT_DIR$/observability-slf4j" />
           </set>
         </option>

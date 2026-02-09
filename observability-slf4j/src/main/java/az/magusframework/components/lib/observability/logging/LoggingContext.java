@@ -139,6 +139,64 @@ public final class LoggingContext {
             MDC.put(LogFields.Error.LAYER, layer);
         }
     }
+    public static void putMagusIds(String requestNumber, String compId) {
+        if (requestNumber != null && !requestNumber.isBlank()) {
+            MDC.put(LogFields.Correlation.REQUEST_NUMBER, requestNumber);
+        }
+        if (compId != null && !compId.isBlank()) {
+            MDC.put(LogFields.Correlation.COMP_ID, compId);
+        }
+    }
+
+    public static void putCorrelationId(String requestId) {
+        if(requestId != null && !requestId.isBlank()) {
+            MDC.put(LogFields.Correlation.REQUEST_ID, requestId);
+        }
+    }
+
+    public static void putHttpMethodAndPath(String method, String path) {
+
+        if(method != null && !method.isBlank()) {
+            MDC.put(LogFields.Http.METHOD, method);
+        }
+
+        if(path != null && !path.isBlank()) {
+            MDC.put(LogFields.Http.PATH, path);
+        }
+    }
+
+    public static void putHttpDirection(String direction) {
+        if(direction != null && !direction.isBlank()) {
+            MDC.put(LogFields.Http.DIRECTION, direction);
+        }
+    }
+
+    public static void putHttpClientIp(String clientIp) {
+        if(clientIp != null && !clientIp.isBlank()) {
+            MDC.put(LogFields.Http.CLIENT_IP, clientIp);
+        }
+    }
+
+    public static void putHttpRoute(String route) {
+        if(route != null && !route.isBlank()) {
+            MDC.put(LogFields.Http.ROUTE, route);
+        }
+    }
+
+    public static void putHttpStatusAndDuration(int status, long durationMs) {
+        MDC.put(LogFields.Http.STATUS, String.valueOf(status));
+        MDC.put(LogFields.Http.DURATION_MS, String.valueOf(durationMs));
+    }
+
+    public static void putHttpOutcome(String outcome) {
+        if(outcome != null && !outcome.isBlank()) {
+            MDC.put(LogFields.Http.OUTCOME, outcome);
+        }
+    }
+
+
+
+
 
 
 
