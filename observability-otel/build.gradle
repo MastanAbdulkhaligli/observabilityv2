@@ -10,15 +10,8 @@ repositories {
 }
 
 dependencies {
+
     implementation project(':observability-core')
-    implementation project(':observability-noop')
-    implementation project(':observability-slf4j')
-    implementation project(':observability-otel')
-
-
-    // Use Logback as the ONLY SLF4J provider
-    runtimeOnly "ch.qos.logback:logback-classic:1.5.6"
-    runtimeOnly "net.logstash.logback:logstash-logback-encoder:8.0"
 
     implementation platform("io.opentelemetry:opentelemetry-bom:1.47.0")
     implementation "io.opentelemetry:opentelemetry-api"
@@ -27,18 +20,19 @@ dependencies {
     implementation "io.opentelemetry:opentelemetry-exporter-otlp"
     implementation "io.opentelemetry:opentelemetry-exporter-logging"
 
+    // ---- TEST ----
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
-
-    testImplementation 'org.assertj:assertj-core:3.24.2'
-    testImplementation 'org.mockito:mockito-core:5.11.0'
-
+    testImplementation "org.assertj:assertj-core:3.25.3"
     testImplementation "io.opentelemetry:opentelemetry-sdk-testing"
     testImplementation "org.mockito:mockito-core:5.12.0"
     testImplementation "io.opentelemetry:opentelemetry-sdk-trace"
+
+
+    // For MDC usage in tests (no backend required)
+    testImplementation "org.slf4j:slf4j-api:2.0.16"
 }
 
 test {
     useJUnitPlatform()
-    testLogging { showStandardStreams = true }
 }

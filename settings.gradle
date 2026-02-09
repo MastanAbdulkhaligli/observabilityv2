@@ -9,4 +9,6 @@ findProject(':examples:pure-java-servlet-embedded-tomcat')?.name = 'pure-java-se
 include 'examples:spring-boot-demo'
 findProject(':examples:spring-boot-demo')?.name = 'spring-boot-demo'
 include 'observability-slf4j'
+include 'observability-otel'
+include 'observability-aspectj'
 

@@ -12,8 +12,10 @@
             <option value="$PROJECT_DIR$/examples/pure-java-console" />
             <option value="$PROJECT_DIR$/examples/pure-java-servlet-embedded-tomcat" />
             <option value="$PROJECT_DIR$/examples/spring-boot-demo" />
+            <option value="$PROJECT_DIR$/observability-aspectj" />
             <option value="$PROJECT_DIR$/observability-core" />
             <option value="$PROJECT_DIR$/observability-noop" />
+            <option value="$PROJECT_DIR$/observability-otel" />
             <option value="$PROJECT_DIR$/observability-slf4j" />
           </set>
         </option>
