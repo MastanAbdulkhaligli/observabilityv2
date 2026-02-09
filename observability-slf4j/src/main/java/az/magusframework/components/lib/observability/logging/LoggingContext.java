@@ -36,6 +36,13 @@ public final class LoggingContext {
                 MDC.get(LogFields.Trace.SAMPLED)
         );
     }
+    public static void clearErrorOnly() {
+        MDC.remove(LogFields.Error.TYPE);
+        MDC.remove(LogFields.Error.MESSAGE);
+        MDC.remove(LogFields.Error.LAYER);
+        MDC.remove(LogFields.Error.KIND);
+        MDC.remove(LogFields.Error.CODE);
+    }
 
     public static void restoreTraceState(TraceState state) {
         if (state == null) {
@@ -80,6 +87,11 @@ public final class LoggingContext {
         MDC.put(LogFields.Runtime.NODE, node);
     }
 
+    public static void putErrorKindAndCode(String kind, String code) {
+        if (kind != null) MDC.put(LogFields.Error.KIND, kind);
+        if (code != null) MDC.put(LogFields.Error.CODE, code);
+    }
+
     // --- HTTP & Correlation ---
 
     public static void putHttpContext(String method, String path, String route, String direction) {
@@ -115,6 +127,35 @@ public final class LoggingContext {
         MDC.put(LogFields.Error.LAYER, layer);
     }
 
+    public static void putServiceContext(String serviceName, String layer, String operation) {
+        MDC.put(LogFields.Service.NAME, serviceName);
+        MDC.put(LogFields.Context.LAYER, layer);
+        MDC.put(LogFields.Context.OPERATION, operation);
+    }
+
+    public static void putErrorLayerIfAbsent(String layer) {
+        if (layer == null) return;
+        if (MDC.get(LogFields.Error.LAYER) == null) {
+            MDC.put(LogFields.Error.LAYER, layer);
+        }
+    }
+
+
+
+    public static void putErrorFromThrowableIfAbsent(Throwable e, String layer) {
+        if (e == null) return;
+
+        putErrorLayerIfAbsent(layer);
+
+        if (MDC.get(LogFields.Error.TYPE) == null) {
+            MDC.put(LogFields.Error.TYPE, e.getClass().getName());
+        }
+
+        if (MDC.get(LogFields.Error.MESSAGE) == null && e.getMessage() != null) {
+            MDC.put(LogFields.Error.MESSAGE, e.getMessage());
+        }
+    }
+
     // --- Cleanup Methods ---
 
     public static void clearTraceContext() {
@@ -123,6 +164,17 @@ public final class LoggingContext {
         MDC.remove(LogFields.Trace.PARENT_SPAN_ID);
         MDC.remove(LogFields.Trace.SAMPLED);
     }
+
+    public static void clearContextOnly() {
+        MDC.remove(LogFields.Context.LAYER);
+        MDC.remove(LogFields.Context.OPERATION);
+        MDC.remove(LogFields.Context.ENTITY);
+        MDC.remove(LogFields.Context.DB_OPERATION);
+        MDC.remove(LogFields.Context.TARGET_SYSTEM);
+        MDC.remove(LogFields.Context.PROTOCOL);
+    }
+
+
 
     public static void clearAll() {
         MDC.clear();

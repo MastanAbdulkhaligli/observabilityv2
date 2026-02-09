@@ -14,12 +14,26 @@ dependencies {
     implementation project(':observability-noop')
     implementation project(':observability-slf4j')
     implementation project(':observability-otel')
+    implementation project(':observability-aspectj')
 
+    // ---- Testing ----
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.assertj:assertj-core:3.24.2'
 
-    // Use Logback as the ONLY SLF4J provider
+    // Mockito (use ONE core version only; keep inline if you need static mocking)
+    testImplementation 'org.mockito:mockito-core:5.12.0'
+    testImplementation 'org.mockito:mockito-inline:5.2.0'
+
+    // (Optional) OTel testing libs if you need them
+    testImplementation "io.opentelemetry:opentelemetry-sdk-testing"
+    testImplementation "io.opentelemetry:opentelemetry-sdk-trace"
+
+    // ---- Runtime logging (tests) ----
     runtimeOnly "ch.qos.logback:logback-classic:1.5.6"
     runtimeOnly "net.logstash.logback:logstash-logback-encoder:8.0"
 
+    // ---- OTel BOM ----
     implementation platform("io.opentelemetry:opentelemetry-bom:1.47.0")
     implementation "io.opentelemetry:opentelemetry-api"
     implementation "io.opentelemetry:opentelemetry-context"
@@ -27,18 +41,20 @@ dependencies {
     implementation "io.opentelemetry:opentelemetry-exporter-otlp"
     implementation "io.opentelemetry:opentelemetry-exporter-logging"
 
-    testImplementation platform('org.junit:junit-bom:5.10.0')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-
-    testImplementation 'org.assertj:assertj-core:3.24.2'
-    testImplementation 'org.mockito:mockito-core:5.11.0'
-
-    testImplementation "io.opentelemetry:opentelemetry-sdk-testing"
-    testImplementation "org.mockito:mockito-core:5.12.0"
-    testImplementation "io.opentelemetry:opentelemetry-sdk-trace"
+    implementation 'org.aspectj:aspectjrt:1.9.22.1'
 }
 
 test {
     useJUnitPlatform()
-    testLogging { showStandardStreams = true }
+    testLogging {
+        showStandardStreams = true
+    }
+    // ✅ AspectJ Load-Time Weaving
+    def weaverJar = file('/Users/mastanabdulkhaligli/tools/aspectjweaver.jar')
+    if (!weaverJar.exists()) {
+        throw new GradleException("AspectJ weaver not found at: " + weaverJar.absolutePath)
+    }
+    jvmArgs "-javaagent:${weaverJar.absolutePath}"
+    // Helpful debug if weaving doesn't happen
+    // jvmArgs "-Daj.weaving.verbose=true"
 }

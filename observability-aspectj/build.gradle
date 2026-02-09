@@ -1,5 +1,5 @@
 plugins {
-    id 'java'
+    id 'java-library'
 }
 
 group = 'az.magusframework.components.lib'
@@ -9,11 +9,117 @@ repositories {
     mavenCentral()
 }
 
+configurations {
+    aspectj
+}
+
 dependencies {
+    api project(':observability-core')
+    api project(':observability-slf4j')
+    api 'org.aspectj:aspectjrt:1.9.22.1'
+
+    // ajc compiler
+    aspectj 'org.aspectj:aspectjtools:1.9.22.1'
+
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.mockito:mockito-core:5.11.0'
+    testImplementation 'org.assertj:assertj-core:3.24.2'
+
+    testRuntimeOnly 'ch.qos.logback:logback-classic:1.5.6'
+    testRuntimeOnly 'net.logstash.logback:logstash-logback-encoder:8.0'
 }
 
 test {
     useJUnitPlatform()
+}
+
+/**
+ * IMPORTANT:
+ * javac must NOT compile your aspects (otherwise aspectOf() won't exist).
+ */
+tasks.named('compileJava', JavaCompile).configure {
+    exclude('az/magusframework/components/lib/aspectj/aspects/**')
+}
+
+/**
+ * ajc output goes to a TEMP folder (NOT the normal java output folder)
+ */
+def ajcOutDir = layout.buildDirectory.dir("tmp/aspectj-aspects").get().asFile
+
+tasks.register("compileAspectj") {
+    group = "build"
+    description = "Compile ONLY AspectJ aspects with ajc (generates aspectOf())"
+
+    dependsOn tasks.named("compileJava")
+
+    def srcRoot = file("src/main/java")
+    inputs.dir(srcRoot)
+    inputs.files(sourceSets.main.compileClasspath)
+    outputs.dir(ajcOutDir)
+
+    doLast {
+        ajcOutDir.mkdirs()
+
+        def cp = (sourceSets.main.compileClasspath.files + sourceSets.main.output.classesDirs.files)
+                .collect { it.absolutePath }
+                .join(File.pathSeparator)
+
+        ant.taskdef(
+                resource: "org/aspectj/tools/ant/taskdefs/aspectjTaskdefs.properties",
+                classpath: configurations.aspectj.asPath
+        )
+
+        ant.iajc(
+                fork: "true",
+                Xlint: "ignore",
+                showWeaveInfo: "true",
+                verbose: "true",
+                source: project.targetCompatibility,
+                target: project.targetCompatibility,
+                destDir: ajcOutDir,
+                classpath: cp
+        ) {
+            sourceroots {
+                pathelement(location: srcRoot.absolutePath)
+            }
+            // ✅ only compile aspects
+            include(name: "az/magusframework/components/lib/aspectj/aspects/**/*.java")
+        }
+    }
+}
+
+/**
+ * Copy compiled aspect CLASSES into a SEPARATE output dir (not classes/java/main)
+ * This avoids duplicates and satisfies Gradle validation.
+ */
+def mergedDir = layout.buildDirectory.dir("classes/aspectjMerged/main").get().asFile
+
+tasks.register("mergeAspectjClasses", Copy) {
+    dependsOn tasks.named("compileAspectj")
+
+    from(ajcOutDir) {
+        include "az/magusframework/components/lib/aspectj/aspects/**"
+    }
+
+    into(mergedDir)
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+/**
+ * Tell Gradle: these extra classes are part of the main output AND are built by mergeAspectjClasses.
+ * This fixes the "implicit dependency" error.
+ */
+sourceSets {
+    main {
+        output.dir(mergedDir, builtBy: tasks.named("mergeAspectjClasses"))
+    }
+}
+
+tasks.named("classes") {
+    dependsOn tasks.named("mergeAspectjClasses")
+}
+
+tasks.named("jar") {
+    dependsOn tasks.named("mergeAspectjClasses")
 }
