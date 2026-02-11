@@ -1,0 +1,41 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'az.magusframework.components.lib'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // This is the ONLY required dependency for a starter:
+    // It pulls all auto-config + metadata.
+    api project(':observability-spring-boot-autoconfigure')
+
+    // --- Optional: include defaults so "it works out of the box" ---
+    // If you want the starter to bring implementations automatically, keep these as API.
+    // If you want users to choose explicitly, change them to compileOnly or remove them.
+
+    // Default metrics backend (if you ship NoopMetricsRecorder in your stack)
+    api project(':observability-noop')
+
+    // OpenTelemetry bridge (OtelSpanFactory + OtelMetricsRecorder) (Option A still needs OpenTelemetry bean from user)
+    api project(':observability-otel')
+
+    // Servlet filter (ObservabilityHttpFilter, body caching, route bucketing)
+    api project(':observability-servlet')
+
+    // Spring MVC route resolver (BEST_MATCHING_PATTERN_ATTRIBUTE resolver)
+    api project(':observability-spring-web')
+
+    // AspectJ layer policy support (only if you want layer policies feature active via starter)
+    api project(':observability-aspectj')
+
+    // Spring Boot BOM alignment (optional but recommended for starters)
+    compileOnly platform("org.springframework.boot:spring-boot-dependencies:3.5.3")
+
+    // OTel API alignment (optional but recommended if starter ships otel module)
+    compileOnly platform("io.opentelemetry:opentelemetry-bom:1.47.0")
+}

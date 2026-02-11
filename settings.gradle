@@ -12,4 +12,7 @@ include 'observability-slf4j'
 include 'observability-otel'
 include 'observability-aspectj'
 include 'observability-servlet'
+include 'observability-spring-web'
+include 'observability-spring-boot-autoconfigure'
+include 'observability-spring-boot-starter'
 

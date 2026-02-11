@@ -1,6 +1,9 @@
 plugins {
+    id 'org.springframework.boot' version '3.5.3'
+    id 'io.spring.dependency-management' version '1.1.7'
     id 'java'
 }
+
 
 group = 'az.magusframework.components.lib'
 version = '1.0-SNAPSHOT'
@@ -12,6 +15,22 @@ repositories {
 dependencies {
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
+
+    // --- Your library (brings autoconfigure + modules) ---
+    implementation project(':observability-spring-boot-starter')
+
+    // --- Spring web ---
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // ---- OpenTelemetry SDK (DEMO ONLY, because Option A) ----
+    implementation platform("io.opentelemetry:opentelemetry-bom:1.47.0")
+    implementation "io.opentelemetry:opentelemetry-sdk"
+    implementation "io.opentelemetry:opentelemetry-exporter-otlp"
+    // optional: prints spans to console (super useful for quick test)
+    implementation "io.opentelemetry:opentelemetry-exporter-logging"
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
 test {

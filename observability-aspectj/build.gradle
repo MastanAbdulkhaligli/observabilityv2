@@ -9,6 +9,16 @@ repositories {
     mavenCentral()
 }
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+
+    // ✅ correct place (NOT project-level)
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
 configurations {
     aspectj
 }
@@ -16,11 +26,13 @@ configurations {
 dependencies {
     api project(':observability-core')
     api project(':observability-slf4j')
+
     api 'org.aspectj:aspectjrt:1.9.22.1'
 
     // ajc compiler
     aspectj 'org.aspectj:aspectjtools:1.9.22.1'
 
+    // ---- TEST ----
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testImplementation 'org.mockito:mockito-core:5.11.0'
@@ -75,8 +87,11 @@ tasks.register("compileAspectj") {
                 Xlint: "ignore",
                 showWeaveInfo: "true",
                 verbose: "true",
-                source: project.targetCompatibility,
-                target: project.targetCompatibility,
+
+                // ✅ stable for Gradle 9+ (don’t depend on project.targetCompatibility)
+                source: "21",
+                target: "21",
+
                 destDir: ajcOutDir,
                 classpath: cp
         ) {
@@ -108,7 +123,6 @@ tasks.register("mergeAspectjClasses", Copy) {
 
 /**
  * Tell Gradle: these extra classes are part of the main output AND are built by mergeAspectjClasses.
- * This fixes the "implicit dependency" error.
  */
 sourceSets {
     main {

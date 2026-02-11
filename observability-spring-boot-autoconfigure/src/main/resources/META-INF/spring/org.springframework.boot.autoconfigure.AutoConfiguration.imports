@@ -1,0 +1,6 @@
+az.magusframework.components.lib.autoconfigure.ObservabilityTracingAutoConfiguration
+az.magusframework.components.lib.autoconfigure.ObservabilityMetricsAutoConfiguration
+az.magusframework.components.lib.autoconfigure.ObservabilityServletAutoConfiguration
+az.magusframework.components.lib.autoconfigure.ObservabilitySpringMvcAutoConfiguration
+az.magusframework.components.lib.autoconfigure.ObservabilityAutoConfiguration
+az.magusframework.components.lib.autoconfigure.ObservabilityLayerPolicyAutoConfiguration

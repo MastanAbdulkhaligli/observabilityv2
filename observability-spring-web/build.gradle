@@ -1,0 +1,31 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'az.magusframework.components.lib'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // depends on your servlet module
+    api project(':observability-servlet')
+
+    // ---- SPRING (compile only) ----
+    compileOnly 'org.springframework:spring-webmvc:6.1.6'
+    testImplementation 'org.springframework:spring-webmvc:6.1.6'
+
+    // ---- SERVLET API (REQUIRED) ----
+    compileOnly 'jakarta.servlet:jakarta.servlet-api:6.0.0'
+    testImplementation 'jakarta.servlet:jakarta.servlet-api:6.0.0'
+
+    // ---- TEST (FIX) ----
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+test {
+    useJUnitPlatform()
+}

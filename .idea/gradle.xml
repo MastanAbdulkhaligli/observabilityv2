@@ -18,6 +18,9 @@
             <option value="$PROJECT_DIR$/observability-otel" />
             <option value="$PROJECT_DIR$/observability-servlet" />
             <option value="$PROJECT_DIR$/observability-slf4j" />
+            <option value="$PROJECT_DIR$/observability-spring-boot-autoconfigure" />
+            <option value="$PROJECT_DIR$/observability-spring-boot-starter" />
+            <option value="$PROJECT_DIR$/observability-spring-web" />
           </set>
         </option>
       </GradleProjectSettings>

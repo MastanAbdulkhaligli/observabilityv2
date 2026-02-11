@@ -1,0 +1,113 @@
+spring:
+  application:
+    name: my-app   # used only by Spring; your lib uses observability.service.*
+
+# =========================================================
+# OBSERVABILITY CORE SETTINGS
+# =========================================================
+observability:
+
+  # -------------------------------------------------------
+  # SERVICE METADATA (used in logs + metrics + spans)
+  # -------------------------------------------------------
+  service:
+    app-name: integrationhub
+    service-name: payment-service
+    module: payments-module
+    component: http-gateway
+    env: local
+
+  # -------------------------------------------------------
+  # HTTP OBSERVABILITY FILTER
+  # -------------------------------------------------------
+  http:
+    enabled: true
+    filter-order: -2147483638
+
+    # request/response body handling
+    max-cached-body-bytes: 0
+    max-body-bytes-to-parse: 4096
+
+    # extract Magus IDs from JSON body
+    extract-magus-ids-from-json-body: false
+
+  # -------------------------------------------------------
+  # TRACING CONFIG
+  # -------------------------------------------------------
+  tracing:
+    backend: simple          # simple | otel
+
+  # -------------------------------------------------------
+  # METRICS CONFIG
+  # -------------------------------------------------------
+  metrics:
+    backend: noop            # noop | otel
+
+    otel:
+      duration-unit: ms      # ns | ms | s
+
+  # -------------------------------------------------------
+  # LAYER OBSERVATION POLICY (AspectJ REQUIRED)
+  # -------------------------------------------------------
+  layer:
+    controller: full         # full | nospan | metricsonly | disabled
+    service: full
+    repository: full
+
+# full        = span + metrics + logs
+# nospan      = metrics only (no span)
+# metricsonly = only metrics
+# disabled    = nothing
+
+
+# =========================================================
+# OPENTELEMETRY CONFIGURATION (OPTION A USERS)
+# =========================================================
+otel:
+
+  service:
+    name: payment-service
+
+  resource:
+    attributes:
+      service.version: 1.0.0
+      deployment.environment: local
+      team: backend
+
+  traces:
+    exporter: otlp
+
+  metrics:
+    exporter: otlp
+
+  logs:
+    exporter: none
+
+  exporter:
+    otlp:
+      endpoint: http://localhost:4317
+      protocol: grpc
+      compression: gzip
+      timeout: 30000
+
+# =========================================================
+# LOGGING (JSON STRUCTURED LOGGING)
+# =========================================================
+logging:
+  level:
+    root: INFO
+    org.springframework: INFO
+    org.apache.catalina: INFO
+    io.opentelemetry: INFO
+
+# =========================================================
+# SPRING BOOT ACTUATOR (OPTIONAL BUT RECOMMENDED)
+# =========================================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    prometheus:
+      enabled: true
