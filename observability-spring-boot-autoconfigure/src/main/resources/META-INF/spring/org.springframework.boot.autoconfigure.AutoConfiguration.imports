@@ -4,3 +4,4 @@ az.magusframework.components.lib.autoconfigure.ObservabilityServletAutoConfigura
 az.magusframework.components.lib.autoconfigure.ObservabilitySpringMvcAutoConfiguration
 az.magusframework.components.lib.autoconfigure.ObservabilityAutoConfiguration
 az.magusframework.components.lib.autoconfigure.ObservabilityLayerPolicyAutoConfiguration
+az.magusframework.components.lib.autoconfigure.ObservabilityAspectjBootstrapAutoConfiguration

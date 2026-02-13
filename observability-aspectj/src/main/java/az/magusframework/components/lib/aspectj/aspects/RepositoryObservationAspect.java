@@ -11,37 +11,77 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Locale;
 
 @Aspect
 public final class RepositoryObservationAspect {
 
-    @Pointcut("execution(* *(..)) && within(*..repository..*)")
-    public void anyRepositoryMethod() {}
+    private static final Logger log = LoggerFactory.getLogger(RepositoryObservationAspect.class);
+
+    @Pointcut(
+            "(" +
+                    "execution(* demo..repository..*(..)) || " +
+                    "execution(* az.magusframework..repository..*(..))" +
+                    ") && " +
+                    "!execution(String *.toString()) && " +
+                    "!execution(int *.hashCode()) && " +
+                    "!execution(boolean *.equals(..)) && " +
+                    "!execution(Class *.getClass()) && " +
+                    "!execution(void *.wait(..)) && " +
+                    "!execution(void *.notify()) && " +
+                    "!execution(void *.notifyAll())"
+    )
+    public void anyRepositoryMethod() { /* marker */ }
 
     @Around("anyRepositoryMethod()")
     public Object observeRepository(ProceedingJoinPoint pjp) throws Throwable {
 
-        ObservabilityBootstrap.ensureInitialized();
+        final InvocationMetadata meta;
+        final MetricTags tags;
 
-        InvocationMetadata meta =
-                InvocationMetadataExtractor.forRepository(pjp);
+        // Protect ONLY observability setup and tag construction.
+        // If repository code throws, it must propagate (no second proceed).
+        try {
+            ObservabilityBootstrap.ensureInitialized();
 
+            meta = InvocationMetadataExtractor.forRepository(pjp);
 
+            tags = BaseTagsFactory.forInvocation(meta)
+                    .with(new MetricTag("entity", resolveEntity(pjp)))
+                    .with(new MetricTag("db_operation",
+                            normalizeDbOperation(
+                                    guessDbOperation(meta.operation())
+                            )));
+        } catch (Throwable obsFailure) {
+            safeLog(pjp, obsFailure, "RepositoryObservationAspect");
+            return pjp.proceed(); // fallback ONCE
+        }
 
-        MetricTags tags =
-                BaseTagsFactory.forInvocation(meta)
-                        .with(new MetricTag("entity", resolveEntity(pjp)))
-                        .with(new MetricTag("db_operation",
-                                normalizeDbOperation(
-                                        guessDbOperation(meta.operation())
-                                )));
-
+        // No catch here: prevents double-execution + duplicate logs
         return ObservationExecutor.observe(pjp, meta, tags);
     }
 
-    // ---------------- db helpers (unchanged) ----------------
+    private static void safeLog(ProceedingJoinPoint pjp, Throwable t, String aspectName) {
+        try {
+            String sig = (pjp == null || pjp.getSignature() == null)
+                    ? "Unknown#unknown"
+                    : pjp.getSignature().toShortString();
+
+            log.error("{} failed at {}. type={}, msg={}. Proceeding without observation.",
+                    aspectName, sig, t.getClass().getName(), t.getMessage());
+
+            if (log.isDebugEnabled()) {
+                log.debug("{} stacktrace", aspectName, t);
+            }
+        } catch (Throwable ignored) {
+            // no-op
+        }
+    }
+
+    // ---------------- db helpers ----------------
 
     public static String guessDbOperation(String operation) {
         String method = extractMethodName(operation);
@@ -85,7 +125,7 @@ public final class RepositoryObservationAspect {
         if (op == null) return "UNKNOWN";
         return switch (op) {
             case "SELECT", "INSERT", "UPDATE", "DELETE", "UPSERT",
-                 "CALL", "BATCH", "UNKNOWN" -> op;
+                 "CALL", "BATCH", "UNKNOWN", "COUNT", "EXISTS" -> op;
             default -> "UNKNOWN";
         };
     }

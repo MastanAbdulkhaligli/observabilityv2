@@ -1,0 +1,22 @@
+<aspectj>
+    <weaver options="-verbose -showWeaveInfo">
+        <!-- ONLY your code -->
+        <include within="demo..*"/>
+        <include within="az.magusframework..*"/>
+
+        <!-- EXCLUDE OTEL AGENT + common noise -->
+        <exclude within="io.opentelemetry..*"/>
+        <exclude within="org.springframework..*"/>
+        <exclude within="org.apache..*"/>
+        <exclude within="jakarta..*"/>
+        <exclude within="java..*"/>
+        <exclude within="sun..*"/>
+        <exclude within="com.sun..*"/>
+    </weaver>
+
+    <aspects>
+        <aspect name="az.magusframework.components.lib.aspectj.aspects.ControllerObservationAspect"/>
+        <aspect name="az.magusframework.components.lib.aspectj.aspects.ServiceObservationAspect"/>
+        <aspect name="az.magusframework.components.lib.aspectj.aspects.RepositoryObservationAspect"/>
+    </aspects>
+</aspectj>
