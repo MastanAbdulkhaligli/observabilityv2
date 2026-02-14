@@ -4,6 +4,7 @@ import az.magusframework.components.lib.aspectj.bootstrap.ObservabilityBootstrap
 import az.magusframework.components.lib.aspectj.exacution.ObservationExecutor;
 import az.magusframework.components.lib.aspectj.metadata.InvocationMetadata;
 import az.magusframework.components.lib.aspectj.metadata.InvocationMetadataExtractor;
+import az.magusframework.components.lib.aspectj.policy.AspectjObservationPolicy;
 import az.magusframework.components.lib.aspectj.tags.BaseTagsFactory;
 import az.magusframework.components.lib.observability.core.tags.MetricTags;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -18,23 +19,16 @@ public final class ControllerObservationAspect {
 
     private static final Logger log = LoggerFactory.getLogger(ControllerObservationAspect.class);
 
-    @Pointcut(
-            "(" +
-                    "execution(* demo..controller..*(..)) || " +
-                    "execution(* az.magusframework..controller..*(..))" +
-                    ") && " +
-                    "!execution(String *.toString()) && " +
-                    "!execution(int *.hashCode()) && " +
-                    "!execution(boolean *.equals(..)) && " +
-                    "!execution(Class *.getClass()) && " +
-                    "!execution(void *.wait(..)) && " +
-                    "!execution(void *.notify()) && " +
-                    "!execution(void *.notifyAll())"
-    )
+    @Pointcut("execution(public * *(..)) && within(*..controller..*)")
     public void anyControllerMethod() { /* marker */ }
 
     @Around("anyControllerMethod()")
     public Object observeController(ProceedingJoinPoint pjp) throws Throwable {
+
+        // YAML-driven runtime gate
+        if (!AspectjObservationPolicy.shouldObserve(AspectjObservationPolicy.Layer.CONTROLLER, pjp)) {
+            return pjp.proceed();
+        }
 
         final InvocationMetadata meta;
         final MetricTags tags;
@@ -46,8 +40,7 @@ public final class ControllerObservationAspect {
             tags = BaseTagsFactory.forInvocation(meta);
         } catch (Throwable obsFailure) {
             safeLog(pjp, obsFailure, "ControllerObservationAspect");
-            // safe fallback: proceed ONCE
-            return pjp.proceed();
+            return pjp.proceed(); // fallback ONCE
         }
 
         // IMPORTANT: do NOT catch Throwable here, otherwise you may proceed TWICE

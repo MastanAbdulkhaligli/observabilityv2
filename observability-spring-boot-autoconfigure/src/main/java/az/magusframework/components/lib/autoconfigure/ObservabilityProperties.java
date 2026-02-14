@@ -11,12 +11,14 @@ public class ObservabilityProperties {
     private final Tracing tracing = new Tracing();
     private final Metrics metrics = new Metrics();
     private final Layer layer = new Layer();
+    private final Aspectj aspectj = new Aspectj();
 
     public Service getService() { return service; }
     public Http getHttp() { return http; }
     public Tracing getTracing() { return tracing; }
     public Metrics getMetrics() { return metrics; }
     public Layer getLayer() { return layer; }
+    public Aspectj getAspectj() { return aspectj; }
 
     public static class Service {
         private String appName = "unknown-app";
@@ -100,4 +102,53 @@ public class ObservabilityProperties {
         public String getRepository() { return repository; }
         public void setRepository(String repository) { this.repository = repository; }
     }
+
+    public static class Aspectj {
+        private boolean enabled = true;
+        private final LayerSelector controller = new LayerSelector();
+        private final LayerSelector service = new LayerSelector();
+        private final LayerSelector repository = new LayerSelector();
+
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
+        public LayerSelector getController() { return controller; }
+        public LayerSelector getService() { return service; }
+        public LayerSelector getRepository() { return repository; }
+
+        public static class LayerSelector {
+            private boolean enabled = true;
+
+            /**
+             * "package" => within(*..controller..*)
+             * "annotation" => @within(RestController/Service/Repository)
+             */
+            private String match = "package";
+
+            private java.util.List<String> includePackages = java.util.List.of();
+            private java.util.List<String> excludePackages = java.util.List.of();
+
+            private java.util.List<String> includeRegex = java.util.List.of();
+            private java.util.List<String> excludeRegex = java.util.List.of();
+
+            public boolean isEnabled() { return enabled; }
+            public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
+            public String getMatch() { return match; }
+            public void setMatch(String match) { this.match = match; }
+
+            public java.util.List<String> getIncludePackages() { return includePackages; }
+            public void setIncludePackages(java.util.List<String> v) { this.includePackages = (v == null) ? java.util.List.of() : v; }
+
+            public java.util.List<String> getExcludePackages() { return excludePackages; }
+            public void setExcludePackages(java.util.List<String> v) { this.excludePackages = (v == null) ? java.util.List.of() : v; }
+
+            public java.util.List<String> getIncludeRegex() { return includeRegex; }
+            public void setIncludeRegex(java.util.List<String> v) { this.includeRegex = (v == null) ? java.util.List.of() : v; }
+
+            public java.util.List<String> getExcludeRegex() { return excludeRegex; }
+            public void setExcludeRegex(java.util.List<String> v) { this.excludeRegex = (v == null) ? java.util.List.of() : v; }
+        }
+    }
+
 }

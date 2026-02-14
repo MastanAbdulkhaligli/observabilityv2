@@ -4,6 +4,7 @@ import az.magusframework.components.lib.aspectj.bootstrap.ObservabilityBootstrap
 import az.magusframework.components.lib.aspectj.exacution.ObservationExecutor;
 import az.magusframework.components.lib.aspectj.metadata.InvocationMetadata;
 import az.magusframework.components.lib.aspectj.metadata.InvocationMetadataExtractor;
+import az.magusframework.components.lib.aspectj.policy.AspectjObservationPolicy;
 import az.magusframework.components.lib.aspectj.tags.BaseTagsFactory;
 import az.magusframework.components.lib.observability.core.tags.MetricTag;
 import az.magusframework.components.lib.observability.core.tags.MetricTags;
@@ -21,29 +22,20 @@ public final class RepositoryObservationAspect {
 
     private static final Logger log = LoggerFactory.getLogger(RepositoryObservationAspect.class);
 
-    @Pointcut(
-            "(" +
-                    "execution(* demo..repository..*(..)) || " +
-                    "execution(* az.magusframework..repository..*(..))" +
-                    ") && " +
-                    "!execution(String *.toString()) && " +
-                    "!execution(int *.hashCode()) && " +
-                    "!execution(boolean *.equals(..)) && " +
-                    "!execution(Class *.getClass()) && " +
-                    "!execution(void *.wait(..)) && " +
-                    "!execution(void *.notify()) && " +
-                    "!execution(void *.notifyAll())"
-    )
+    @Pointcut("execution(public * *(..)) && within(*..repository..*)")
     public void anyRepositoryMethod() { /* marker */ }
 
     @Around("anyRepositoryMethod()")
     public Object observeRepository(ProceedingJoinPoint pjp) throws Throwable {
 
+        // YAML-driven runtime gate
+        if (!AspectjObservationPolicy.shouldObserve(AspectjObservationPolicy.Layer.REPOSITORY, pjp)) {
+            return pjp.proceed();
+        }
+
         final InvocationMetadata meta;
         final MetricTags tags;
 
-        // Protect ONLY observability setup and tag construction.
-        // If repository code throws, it must propagate (no second proceed).
         try {
             ObservabilityBootstrap.ensureInitialized();
 
@@ -60,7 +52,6 @@ public final class RepositoryObservationAspect {
             return pjp.proceed(); // fallback ONCE
         }
 
-        // No catch here: prevents double-execution + duplicate logs
         return ObservationExecutor.observe(pjp, meta, tags);
     }
 

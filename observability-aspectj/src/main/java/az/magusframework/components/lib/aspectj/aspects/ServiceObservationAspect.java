@@ -4,6 +4,7 @@ import az.magusframework.components.lib.aspectj.bootstrap.ObservabilityBootstrap
 import az.magusframework.components.lib.aspectj.exacution.ObservationExecutor;
 import az.magusframework.components.lib.aspectj.metadata.InvocationMetadata;
 import az.magusframework.components.lib.aspectj.metadata.InvocationMetadataExtractor;
+import az.magusframework.components.lib.aspectj.policy.AspectjObservationPolicy;
 import az.magusframework.components.lib.aspectj.tags.BaseTagsFactory;
 import az.magusframework.components.lib.observability.core.tags.MetricTags;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -18,29 +19,21 @@ public final class ServiceObservationAspect {
 
     private static final Logger log = LoggerFactory.getLogger(ServiceObservationAspect.class);
 
-    @Pointcut(
-            "(" +
-                    "execution(* demo..service..*(..)) || " +
-                    "execution(* az.magusframework..service..*(..))" +
-                    ") && " +
-                    "!execution(String *.toString()) && " +
-                    "!execution(int *.hashCode()) && " +
-                    "!execution(boolean *.equals(..)) && " +
-                    "!execution(Class *.getClass()) && " +
-                    "!execution(void *.wait(..)) && " +
-                    "!execution(void *.notify()) && " +
-                    "!execution(void *.notifyAll())"
-    )
+    @Pointcut("execution(public * *(..)) && within(*..service..*)")
     public void anyServiceMethod() { /* marker */ }
 
     @Around("anyServiceMethod()")
     public Object observeService(ProceedingJoinPoint pjp) throws Throwable {
 
+        // YAML-driven runtime gate
+        if (!AspectjObservationPolicy.shouldObserve(AspectjObservationPolicy.Layer.SERVICE, pjp)) {
+            return pjp.proceed();
+        }
+
         final InvocationMetadata meta;
         final MetricTags tags;
 
         // Protect ONLY observability setup.
-        // If business code throws, it must propagate normally (no double proceed).
         try {
             ObservabilityBootstrap.ensureInitialized();
             meta = InvocationMetadataExtractor.forService(pjp);

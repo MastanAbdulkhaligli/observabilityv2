@@ -1,15 +1,25 @@
+<!DOCTYPE aspectj PUBLIC
+        "-//AspectJ//DTD//EN"
+        "https://www.eclipse.org/aspectj/dtd/aspectj.dtd">
 <aspectj>
-    <weaver options="-verbose -showWeaveInfo">
-        <!-- ONLY your code -->
-        <include within="demo..*"/>
-        <include within="az.magusframework..*"/>
 
-        <!-- EXCLUDE OTEL AGENT + common noise -->
+    <weaver options="-verbose -showWeaveInfo">
+        <!-- Default: ONLY Magus / company code -->
+        <include within="az.magusframework..*"/>
+        <include within="demo.bankaccount..*"/>
+
+        <!-- Don't weave these (reduces noise + risk) -->
         <exclude within="io.opentelemetry..*"/>
         <exclude within="org.springframework..*"/>
         <exclude within="org.apache..*"/>
         <exclude within="jakarta..*"/>
+        <exclude within="javax..*"/>
+        <exclude within="kotlin..*"/>
+        <exclude within="scala..*"/>
+
+        <!-- JDK -->
         <exclude within="java..*"/>
+        <exclude within="jdk..*"/>
         <exclude within="sun..*"/>
         <exclude within="com.sun..*"/>
     </weaver>
@@ -19,4 +29,5 @@
         <aspect name="az.magusframework.components.lib.aspectj.aspects.ServiceObservationAspect"/>
         <aspect name="az.magusframework.components.lib.aspectj.aspects.RepositoryObservationAspect"/>
     </aspects>
+
 </aspectj>
