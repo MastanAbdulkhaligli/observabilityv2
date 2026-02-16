@@ -1,102 +1,123 @@
-observability-lib/
-├── gradle/                                   # optional: shared gradle logic, conventions
-│   ├── libs.versions.toml                    # version catalog (recommended)
-│   └── convention-plugins/                   # optional: java-library, publishing, quality plugins
-├── settings.gradle(.kts)                     # includes all modules
-├── build.gradle(.kts)                        # root build (repos, common config)
-├── README.md
-├── docs/
-│   ├── ARCHITECTURE.md                       # module boundaries + contracts
-│   ├── TAGGING_SCHEMA.md                     # tag keys + cardinality rules
-│   ├── LOGGING_SCHEMA.md                     # MDC keys + JSON logging expectations
-│   └── PROPAGATION.md                        # W3C/B3 precedence + baggage rules
-├── observability-bom/                        # optional but recommended (align versions)
-│   └── build.gradle(.kts)
-│
-├── observability-core/                       # core contracts + utilities (no Spring)
-│   ├── build.gradle
+az.magusframework.components.lib/
+├── observability-core/                         # core contracts (no framework deps)
 │   └── src/main/java/az/magusframework/components/lib/observability/core/
-│       ├── error/                            # ErrorClassifier, ErrorInfo, ErrorKind
-│       ├── logging/                          # LogFields (canonical MDC keys)
-│       ├── metrics/                          # MetricsRecorder, Outcome, TimerSample
-│       ├── tags/                             # Layer, MetricTag, MetricTags, TagsFactory
-│       ├── telemetry/                        # Telemetry, TelemetryHelper, CheckedSupplier
+│       ├── error/
+│       │   ├── ErrorClassifier
+│       │   ├── ErrorInfo
+│       │   ├── ErrorKind
+│       │   └── (ErrorCode/Status helpers if present)
+│       ├── logging/
+│       │   └── LogFields                        # canonical MDC keys
+│       ├── metrics/
+│       │   ├── MetricsRecorder
+│       │   ├── Outcome
+│       │   └── TimerSample
+│       ├── tags/
+│       │   ├── Layer
+│       │   ├── MetricTag
+│       │   ├── MetricTags
+│       │   └── TagsFactory                      # httpServer(...) etc
+│       ├── telemetry/
+│       │   └── TelemetryHelper                  # calls MetricsRecorder + shared patterns
 │       └── tracing/
-│           ├── TraceIdGenerator, RandomTraceIdGenerator
-│           ├── TracePropagation              # extraction/injection (W3C + B3 if you keep it)
-│           └── span/                         # Span, SpanContext, SpanFactory, SpanHolder, SpanScope, Simple*
+│           ├── TraceIdGenerator
+│           ├── RandomTraceIdGenerator
+│           ├── TracePropagation                 # extract/inject (W3C/B3 + baggage)
+│           ├── Tracing                           # global SpanFactory holder
+│           └── span/
+│               ├── Span
+│               ├── SpanContext
+│               ├── SpanFactory
+│               ├── SpanKind
+│               ├── SpanHolder                    # thread-local stack
+│               ├── SpanScope                     # AutoCloseable
+│               ├── SpanStatus
+│               └── SimpleSpanFactory             # default/simple backend
 │
-├── observability-slf4j/                      # MDC integration (no Spring)
-│   ├── build.gradle
+├── observability-slf4j/                         # MDC integration (no Spring dependency)
 │   └── src/main/java/az/magusframework/components/lib/observability/
-│       ├── logging/                          # LoggingContext (MDC put/clear helpers)
-│       └── tracing/                          # TraceMdcScope (restore previous trace MDC)
+│       ├── logging/
+│       │   └── LoggingContext                   # MDC put/remove helpers + TraceState
+│       └── tracing/
+│           └── TraceMdcScope                     # sync SpanHolder.current() -> MDC
 │
-├── observability-aspectj/                    # layer instrumentation via AspectJ (optional)
-│   ├── build.gradle
-│   └── src/main/java/az/magusframework/components/lib/aspectj/
-│       ├── aspects/                          # Controller/Service/Repository aspects
-│       ├── bootstrap/                        # ObservabilityBootstrap + runtime init (if still used)
-│       ├── execution/                        # ObservationExecutor (spans + metrics + MDC scopes)
-│       ├── metadata/                         # InvocationMetadata, Extractors, OperationName
-│       ├── policy/                           # LayerObservationPolicy + LayerPolicyRegistry
-│       ├── support/                          # scopes/utilities
-│       └── timing/                           # ExclusiveTimingStack
-│
-├── observability-servlet/                    # generic servlet filter (no Spring)
-│   ├── build.gradle
-│   └── src/main/java/az/magusframework/components/lib/servlet/
-│       ├── filter/                           # ObservabilityHttpFilter
-│       ├── route/                            # HttpRouteResolver, DefaultRouteResolver, RouteBucketing
-│       ├── body/                             # RequestBodyExtractor, JsonMagusIdsExtractor, Noop*
-│       └── support/                          # CachedBodyHttpServletRequest, StatusCaptureResponseWrapper, ResponseHeaderMap
-│
-├── observability-spring-web/                 # Spring MVC integration (optional)
-│   ├── build.gradle
-│   └── src/main/java/az/magusframework/components/lib/spring/webmvc/
-│       └── SpringMvcRouteResolver            # BEST_MATCHING_PATTERN_ATTRIBUTE -> route template
-│
-├── observability-otel/                       # OpenTelemetry backend adapters (Option A)
-│   ├── build.gradle
-│   └── src/main/java/az/magusframework/components/lib/observability/otel/
-│       ├── OtelMetricsRecorder               # MetricsRecorder backed by OTel Meter
-│       └── OtelSpanFactory                   # SpanFactory backed by injected OpenTelemetry
-│
-├── observability-noop/                       # noop/test backends
-│   ├── build.gradle
+├── observability-noop/                          # debug/test backend
 │   └── src/main/java/az/magusframework/components/lib/observability/noop/
-│       └── NoopMetricsRecorder               # minimal/no-op metrics implementation
-│       # (optional) NoopSpanFactory if you want
+│       └── NoopMetricsRecorder                  # logs timers/counters instead of exporting
 │
-├── observability-spring-boot-autoconfigure/  # Spring Boot auto-config (Option A)
-│   ├── build.gradle
-│   ├── src/main/java/az/magusframework/components/lib/autoconfigure/
-│   │   ├── ObservabilityAutoConfiguration            # enables @ConfigurationProperties
-│   │   ├── ObservabilityProperties                   # prefix="observability"
-│   │   ├── ObservabilityOtelProperties               # prefix="observability.otel" (optional for future)
-│   │   ├── ObservabilityMetricsAutoConfiguration     # metrics backend=noop|otel (requires OpenTelemetry bean)
-│   │   ├── ObservabilityTracingAutoConfiguration     # tracing backend=simple|otel (requires OpenTelemetry bean)
-│   │   ├── ObservabilityServletAutoConfiguration     # servlet filter + extractors + route resolver
-│   │   ├── ObservabilitySpringMvcAutoConfiguration   # SpringMvcRouteResolver -> HttpRouteResolver
-│   │   └── ObservabilityLayerPolicyAutoConfiguration # observability.layer.* -> LayerPolicyRegistry (if aspectj present)
+├── observability-otel/                          # OpenTelemetry backend adapters
+│   └── src/main/java/az/magusframework/components/lib/observability/otel/
+│       ├── OtelSpanAdapter                      # wraps io.opentelemetry Span -> your Span
+│       └── OtelSpanFactory                      # SpanFactory using injected OpenTelemetry
+│
+├── observability-aspectj/                       # layer instrumentation with AspectJ weaving
+│   ├── src/main/java/az/magusframework/components/lib/aspectj/
+│   │   ├── aspects/
+│   │   │   ├── ControllerObservationAspect
+│   │   │   ├── ServiceObservationAspect
+│   │   │   └── RepositoryObservationAspect
+│   │   ├── bootstrap/
+│   │   │   ├── ObservabilityBootstrap           # init(app, service, telemetry, traceIdGen)
+│   │   │   └── ObservabilityRuntime
+│   │   ├── exacution/                           # (typo kept as-is in package name)
+│   │   │   └── ObservationExecutor              # span + metrics + MDC scopes + exclusive timing
+│   │   ├── metadata/
+│   │   │   ├── InvocationMetadata
+│   │   │   ├── InvocationMetadataExtractor
+│   │   │   └── OperationName
+│   │   ├── policy/
+│   │   │   ├── LayerObservationPolicy
+│   │   │   └── LayerPolicyRegistry
+│   │   ├── support/
+│   │   │   └── MdcScope
+│   │   ├── timing/
+│   │   │   └── ExclusiveTimingStack             # inclusive/exclusive nanos for nested layers
+│   │   └── error/
+│   │       └── ErrorObservation                 # optional helper (span + MDC error enrichment)
 │   └── src/main/resources/
-│       └── META-INF/spring/
-│           └── org.springframework.boot.autoconfigure.AutoConfiguration.imports
-│               # lists all auto-config classes above
+│       └── META-INF/aop.xml                     # aspect list (for LTW / javaagent weaving)
 │
-├── observability-spring-boot-starter/        # dependency-only starter (no imports file here)
-│   ├── build.gradle
-│   └── (no code required)
-│       # depends on :observability-spring-boot-autoconfigure
-│       # and optionally exports: :observability-servlet, :observability-spring-web,
-│       # :observability-otel, :observability-noop, :observability-aspectj
+├── observability-servlet/                       # generic servlet filter (no Spring dependency)
+│   └── src/main/java/az/magusframework/components/lib/servlet/
+│       ├── body/
+│       │   ├── RequestBodyExtractor
+│       │   ├── NoopRequestBodyExtractor
+│       │   └── JsonMagusIdsExtractor            # extracts requestNumber/compId from JSON body
+│       ├── filter/
+│       │   └── ObservabilityHttpFilter          # inbound HTTP span + metrics + MDC + async-safe
+│       ├── route/
+│       │   ├── HttpRouteResolver
+│       │   ├── DefaultRouteResolver
+│       │   └── RouteBucketing                   # low-cardinality route bucketing
+│       └── support/
+│           ├── CachedBodyHttpServletRequest     # caches body for parsing safely
+│           ├── ResponseHeaderMap                # TracePropagation.injectOutbound(...)
+│           └── StatusCaptureResponseWrapper     # captures status reliably
 │
-└── examples/
-    ├── pure-java-console/                     # no servlet, just manual scopes + spans
-    │   └── build.gradle
-    ├── pure-java-servlet-embedded-tomcat/     # servlet filter demonstration (no Spring)
-    │   └── build.gradle
-    └── spring-boot-demo/                      # demo app consuming the starter/autoconfig
-        ├── build.gradle
-        └── src/main/java/...                  # controllers/services to generate traces+metrics+logs
-            └── application.yml
+├── observability-spring-web/                    # Spring MVC route template resolver
+│   └── src/main/java/az/magusframework/components/lib/spring/webmvc/
+│       └── SpringMvcRouteResolver               # uses BEST_MATCHING_PATTERN_ATTRIBUTE
+│
+└── observability-spring-boot-starter/           # auto-config wiring (Boot 3.x)
+    └── src/main/java/az/magusframework/components/lib/autoconfigure/
+        ├── ObservabilityAutoConfiguration
+        ├── ObservabilityProperties              # observability.* (service/http/tracing/metrics/layer)
+        ├── ObservabilityOtelProperties          # observability.otel.* (serviceName/version/env)
+        ├── ObservabilityTracingAutoConfiguration
+        │   ├── TraceIdGenerator bean (default RandomTraceIdGenerator)
+        │   ├── SpanFactory: simple | otel (requires OpenTelemetry bean)
+        │   └── Tracing.setSpanFactory(...) via SmartInitializingSingleton
+        ├── ObservabilityMetricsAutoConfiguration
+        │   ├── MetricsRecorder: noop | otel (requires OpenTelemetry bean)
+        │   └── fail-fast guards when backend=otel but no OpenTelemetry bean
+        ├── ObservabilityServletAutoConfiguration
+        │   ├── HttpRouteResolver bean (DefaultRouteResolver or override)
+        │   ├── RequestBodyExtractor bean (JsonMagusIdsExtractor or Noop)
+        │   ├── ObservabilityHttpFilter bean
+        │   └── FilterRegistrationBean order + urlPatterns
+        ├── ObservabilitySpringMvcAutoConfiguration
+        │   └── HttpRouteResolver bean override -> SpringMvcRouteResolver
+        ├── ObservabilityLayerPolicyAutoConfiguration
+        │   └── LayerPolicyRegistry.override(...) from observability.layer.*
+        └── ObservabilityAspectjBootstrapAutoConfiguration
+            └── ObservabilityBootstrap.init(...) (TelemetryHelper + TraceIdGenerator)

@@ -3,6 +3,9 @@
         <!-- ONLY your code -->
         <include within="demo..*"/>
         <include within="az.magusframework..*"/>
+        <include within="demo.bankaccount..*"/>
+        <include within="demo.testaspect..*"/>
+
 
         <!-- EXCLUDE OTEL AGENT + common noise -->
         <exclude within="io.opentelemetry..*"/>

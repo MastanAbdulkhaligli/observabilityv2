@@ -13,17 +13,24 @@ import org.aspectj.lang.annotation.Pointcut;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Observes Spring @Service beans without hardcoding app packages.
+ */
 @Aspect
 public final class ServiceObservationAspect {
 
     private static final Logger log = LoggerFactory.getLogger(ServiceObservationAspect.class);
 
+    // ---- Pointcuts (annotation-based, no package coupling) ----
+
+    @Pointcut("within(@org.springframework.stereotype.Service *)")
+    public void anyServiceType() { /* marker */ }
+
+    @Pointcut("execution(public * *(..))")
+    public void anyPublicMethod() { /* marker */ }
+
     @Pointcut(
-            "(" +
-                    "execution(* demo..service..*(..)) || " +
-                    "execution(* az.magusframework..service..*(..))" +
-                    ") && " +
-                    "!execution(String *.toString()) && " +
+            "!execution(String *.toString()) && " +
                     "!execution(int *.hashCode()) && " +
                     "!execution(boolean *.equals(..)) && " +
                     "!execution(Class *.getClass()) && " +
@@ -31,7 +38,12 @@ public final class ServiceObservationAspect {
                     "!execution(void *.notify()) && " +
                     "!execution(void *.notifyAll())"
     )
+    public void excludeObjectMethods() { /* marker */ }
+
+    @Pointcut("anyServiceType() && anyPublicMethod() && excludeObjectMethods()")
     public void anyServiceMethod() { /* marker */ }
+
+    // ---- Advice ----
 
     @Around("anyServiceMethod()")
     public Object observeService(ProceedingJoinPoint pjp) throws Throwable {
@@ -39,8 +51,6 @@ public final class ServiceObservationAspect {
         final InvocationMetadata meta;
         final MetricTags tags;
 
-        // Protect ONLY observability setup.
-        // If business code throws, it must propagate normally (no double proceed).
         try {
             ObservabilityBootstrap.ensureInitialized();
             meta = InvocationMetadataExtractor.forService(pjp);
@@ -50,7 +60,6 @@ public final class ServiceObservationAspect {
             return pjp.proceed(); // fallback ONCE
         }
 
-        // No catch here: prevents double-execution + duplicate logs
         return ObservationExecutor.observe(pjp, meta, tags);
     }
 

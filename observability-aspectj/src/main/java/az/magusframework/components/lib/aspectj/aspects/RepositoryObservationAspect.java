@@ -16,17 +16,25 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Locale;
 
+/**
+ * Observes Spring Data / DAO repositories annotated with @Repository
+ * without hardcoding app packages.
+ */
 @Aspect
 public final class RepositoryObservationAspect {
 
     private static final Logger log = LoggerFactory.getLogger(RepositoryObservationAspect.class);
 
+    // ---- Pointcuts (annotation-based, no package coupling) ----
+
+    @Pointcut("within(@org.springframework.stereotype.Repository *)")
+    public void anyRepositoryType() { /* marker */ }
+
+    @Pointcut("execution(public * *(..))")
+    public void anyPublicMethod() { /* marker */ }
+
     @Pointcut(
-            "(" +
-                    "execution(* demo..repository..*(..)) || " +
-                    "execution(* az.magusframework..repository..*(..))" +
-                    ") && " +
-                    "!execution(String *.toString()) && " +
+            "!execution(String *.toString()) && " +
                     "!execution(int *.hashCode()) && " +
                     "!execution(boolean *.equals(..)) && " +
                     "!execution(Class *.getClass()) && " +
@@ -34,7 +42,12 @@ public final class RepositoryObservationAspect {
                     "!execution(void *.notify()) && " +
                     "!execution(void *.notifyAll())"
     )
+    public void excludeObjectMethods() { /* marker */ }
+
+    @Pointcut("anyRepositoryType() && anyPublicMethod() && excludeObjectMethods()")
     public void anyRepositoryMethod() { /* marker */ }
+
+    // ---- Advice ----
 
     @Around("anyRepositoryMethod()")
     public Object observeRepository(ProceedingJoinPoint pjp) throws Throwable {
@@ -42,25 +55,20 @@ public final class RepositoryObservationAspect {
         final InvocationMetadata meta;
         final MetricTags tags;
 
-        // Protect ONLY observability setup and tag construction.
-        // If repository code throws, it must propagate (no second proceed).
         try {
             ObservabilityBootstrap.ensureInitialized();
-
             meta = InvocationMetadataExtractor.forRepository(pjp);
 
             tags = BaseTagsFactory.forInvocation(meta)
                     .with(new MetricTag("entity", resolveEntity(pjp)))
                     .with(new MetricTag("db_operation",
-                            normalizeDbOperation(
-                                    guessDbOperation(meta.operation())
-                            )));
+                            normalizeDbOperation(guessDbOperation(meta.operation()))
+                    ));
         } catch (Throwable obsFailure) {
             safeLog(pjp, obsFailure, "RepositoryObservationAspect");
             return pjp.proceed(); // fallback ONCE
         }
 
-        // No catch here: prevents double-execution + duplicate logs
         return ObservationExecutor.observe(pjp, meta, tags);
     }
 
