@@ -44,17 +44,17 @@ dependencies {
     implementation 'org.aspectj:aspectjrt:1.9.22.1'
 }
 
-test {
-    useJUnitPlatform()
-    testLogging {
-        showStandardStreams = true
-    }
-    // ✅ AspectJ Load-Time Weaving
-    def weaverJar = file('/Users/mastanabdulkhaligli/tools/aspectjweaver.jar')
-    if (!weaverJar.exists()) {
-        throw new GradleException("AspectJ weaver not found at: " + weaverJar.absolutePath)
-    }
-    jvmArgs "-javaagent:${weaverJar.absolutePath}"
-    // Helpful debug if weaving doesn't happen
-    // jvmArgs "-Daj.weaving.verbose=true"
-}
+//test {
+//    useJUnitPlatform()
+//    testLogging {
+//        showStandardStreams = true
+//    }
+//    // ✅ AspectJ Load-Time Weaving
+//    def weaverJar = file('/Users/mastanabdulkhaligli/tools/aspectjweaver.jar')
+//    if (!weaverJar.exists()) {
+//        throw new GradleException("AspectJ weaver not found at: " + weaverJar.absolutePath)
+//    }
+//    jvmArgs "-javaagent:${weaverJar.absolutePath}"
+//    // Helpful debug if weaving doesn't happen
+//    // jvmArgs "-Daj.weaving.verbose=true"
+//}

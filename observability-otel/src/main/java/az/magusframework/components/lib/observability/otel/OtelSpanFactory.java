@@ -1,122 +1,156 @@
 package az.magusframework.components.lib.observability.otel;
 
-import az.magusframework.components.lib.observability.core.tracing.TraceIdGenerator;
-import az.magusframework.components.lib.observability.core.tracing.span.SpanFactory;
 import az.magusframework.components.lib.observability.core.tags.MetricTags;
-import az.magusframework.components.lib.observability.core.tracing.span.*;
+import az.magusframework.components.lib.observability.core.tracing.TraceIdGenerator;
+import az.magusframework.components.lib.observability.core.tracing.span.Span;
+import az.magusframework.components.lib.observability.core.tracing.span.SpanContext;
+import az.magusframework.components.lib.observability.core.tracing.span.SpanFactory;
+import az.magusframework.components.lib.observability.core.tracing.span.SpanHolder;
+import az.magusframework.components.lib.observability.core.tracing.span.SpanKind;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.SpanBuilder;
+import io.opentelemetry.api.trace.TraceFlags;
+import io.opentelemetry.api.trace.TraceState;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Context;
 
-/**
- * <h1>OtelSpanFactory</h1>
- * <p>
- * The OpenTelemetry-backed implementation of the {@link SpanFactory} contract.
- * </p>
- *
- * <p>This factory bridges the gap between the Magus core identity model and the
- * OpenTelemetry SDK. It ensures that while the backend utilizes OTel's export
- * capabilities, the ID generation and tagging adhere to the Magus {@code LogFields}
- * and {@code TraceIdGenerator} standards.</p>
- *
- * <h3>Context Management:</h3>
- * <p>While OTel manages its own internal context, this factory integrates with
- * {@link SpanHolder} to ensure that Magus-managed spans correctly participate
- * in OTel traces.</p>
- *
- *
- */
+import java.util.Objects;
+
 public class OtelSpanFactory implements SpanFactory {
 
     private final Tracer tracer;
-    private final TraceIdGenerator idGenerator;
 
-    /**
-     * Constructor with explicit OpenTelemetry injection.
-     * Spring will provide both dependencies when backend=otel.
-     */
     public OtelSpanFactory(
-            TraceIdGenerator idGenerator,
-            OpenTelemetry openTelemetry) {
-
-        if (idGenerator == null) {
-            throw new IllegalArgumentException("TraceIdGenerator must not be null");
-        }
+            TraceIdGenerator idGenerator, // kept for signature compatibility (not used for OTel IDs)
+            OpenTelemetry openTelemetry
+    ) {
         if (openTelemetry == null) {
             throw new IllegalArgumentException("OpenTelemetry must not be null when backend=otel");
         }
-
-        this.idGenerator = idGenerator;
+        // idGenerator intentionally not used for IDs in OTel mode
         this.tracer = openTelemetry.getTracer("observability-lib", "1.0.0");
     }
 
     @Override
     public Span childSpan(String operation, MetricTags tags, TraceIdGenerator generator) {
         Span parent = SpanHolder.current();
-        if (parent == null) {
-            return null;
-        }
+        if (parent == null) return null;
 
-        String traceId = parent.context().traceId();
-        String parentSpanId = parent.context().spanId();
-
-        return createOtelSpan(operation, tags, traceId, parentSpanId, SpanKind.INTERNAL);
+        // In OTel mode: parent is already current when your code uses activate()
+        // So we just start a child span using current context.
+        return createOtelSpanWithCurrentParent(operation, tags, SpanKind.INTERNAL, parent.context());
     }
 
     @Override
     public Span httpRootSpan(String name, MetricTags tags, SpanContext inboundParent, TraceIdGenerator generator) {
-        String traceId = (inboundParent != null)
-                ? inboundParent.traceId()
-                : generator.newTraceId();
-
-        String parentSpanId = (inboundParent != null)
-                ? inboundParent.spanId()
-                : null;
-
-        return createOtelSpan(name, tags, traceId, parentSpanId, SpanKind.SERVER);
+        // If inbound parent exists => set REMOTE parent so trace continues.
+        // If not => setNoParent so new trace starts.
+        return createOtelServerSpan(name, tags, inboundParent);
     }
 
-    private Span createOtelSpan(
-            String operationName,
-            MetricTags tags,
-            String traceId,
-            String parentSpanId,
-            SpanKind kind) {
+    // =========================================================
+    // Core creation
+    // =========================================================
 
-        String spanId = idGenerator.newSpanId();
+    private Span createOtelServerSpan(String operationName, MetricTags tags, SpanContext inboundParent) {
+        SpanBuilder builder = tracer.spanBuilder(safeName(operationName));
 
-        // Use real operation name for the span
-        SpanBuilder builder = tracer.spanBuilder(
-                operationName != null && !operationName.isBlank()
-                        ? operationName
-                        : "unnamed-operation"
-        );
+        // If you want: builder.setSpanKind(io.opentelemetry.api.trace.SpanKind.SERVER);
+        // (Not required for traceparent correctness, but good practice.)
 
-        // Inject custom IDs as attributes (low-cardinality)
-        builder.setAttribute("custom.trace_id", traceId);
-        builder.setAttribute("custom.span_id", spanId);
-        if (parentSpanId != null) {
-            builder.setAttribute("custom.parent_span_id", parentSpanId);
+        // IMPORTANT: make parent explicit. If missing => new trace.
+        if (isValid(inboundParent)) {
+            io.opentelemetry.api.trace.SpanContext remoteParent = toRemoteOtelParent(inboundParent);
+            builder.setParent(Context.root().with(io.opentelemetry.api.trace.Span.wrap(remoteParent)));
+        } else {
+            builder.setNoParent();
         }
 
-        // Add all domain tags as OTel attributes
-        if (tags != null) {
-            tags.asList().forEach(tag -> {
-                if (tag.key() != null && tag.value() != null) {
-                    builder.setAttribute(tag.key(), tag.value());
-                }
-            });
-        }
+        applyTags(builder, tags);
 
         io.opentelemetry.api.trace.Span otelSpan = builder.startSpan();
+        io.opentelemetry.api.trace.SpanContext sc = otelSpan.getSpanContext();
+
+        String parentSpanId = isValid(inboundParent) ? inboundParent.spanId() : null;
 
         return new OtelSpanAdapter(
                 otelSpan,
-                traceId,
-                spanId,
+                sc.getTraceId(),
+                sc.getSpanId(),
                 parentSpanId,
+                sc.isSampled(),
+                SpanKind.SERVER,
+                operationName
+        );
+    }
+
+    private Span createOtelSpanWithCurrentParent(
+            String operationName,
+            MetricTags tags,
+            SpanKind kind,
+            SpanContext magusParentContextOrNull
+    ) {
+        SpanBuilder builder = tracer.spanBuilder(safeName(operationName));
+        // Child of CURRENT OTel context (because parent span activate() called delegate.makeCurrent()).
+        // So do NOT setNoParent here.
+
+        applyTags(builder, tags);
+
+        io.opentelemetry.api.trace.Span otelSpan = builder.startSpan();
+        io.opentelemetry.api.trace.SpanContext sc = otelSpan.getSpanContext();
+
+        String parentSpanId = (magusParentContextOrNull != null) ? magusParentContextOrNull.spanId() : null;
+
+        return new OtelSpanAdapter(
+                otelSpan,
+                sc.getTraceId(),
+                sc.getSpanId(),
+                parentSpanId,
+                sc.isSampled(),
                 kind,
                 operationName
+        );
+    }
+
+    // =========================================================
+    // Helpers
+    // =========================================================
+
+    private static void applyTags(SpanBuilder builder, MetricTags tags) {
+        if (tags == null) return;
+        tags.asList().forEach(tag -> {
+            if (tag.key() != null && tag.value() != null) {
+                builder.setAttribute(tag.key(), tag.value());
+            }
+        });
+    }
+
+    private static String safeName(String operationName) {
+        if (operationName == null) return "unnamed-operation";
+        String s = operationName.trim();
+        return s.isEmpty() ? "unnamed-operation" : s;
+    }
+
+    private static boolean isValid(SpanContext p) {
+        if (p == null) return false;
+        String tid = p.traceId();
+        String sid = p.spanId();
+        return tid != null && !tid.isBlank() && sid != null && !sid.isBlank();
+    }
+
+    private static io.opentelemetry.api.trace.SpanContext toRemoteOtelParent(SpanContext inboundParent) {
+        Objects.requireNonNull(inboundParent, "inboundParent");
+
+        TraceFlags flags = inboundParent.sampled()
+                ? TraceFlags.getSampled()
+                : TraceFlags.getDefault();
+
+        // tracestate not supported in your SpanContext model; default OK.
+        return io.opentelemetry.api.trace.SpanContext.createFromRemoteParent(
+                inboundParent.traceId(),
+                inboundParent.spanId(),
+                flags,
+                TraceState.getDefault()
         );
     }
 }
