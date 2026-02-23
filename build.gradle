@@ -1,19 +1,39 @@
-plugins {
-    id 'java'
+allprojects {
+    group = "az.magusframework.components.lib"
+    version = "1.0-SNAPSHOT"
+
+    repositories {
+        mavenCentral()
+    }
 }
 
-group = 'az.magusframework.components.lib'
-version = '1.0-SNAPSHOT'
+subprojects { sub ->
+    // Skip demo apps
+    def isExample = (sub.path == ":examples" || sub.path.startsWith(":examples:"))
+    if (isExample) {
+        return
+    }
 
-repositories {
-    mavenCentral()
-}
+    // Ensure Java component exists
+    apply plugin: "java"          // safe even if module already uses java-library
+    apply plugin: "maven-publish"
 
-dependencies {
-    testImplementation platform('org.junit:junit-bom:5.10.0')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-}
+    // Optional tests config
+    dependencies {
+        testImplementation platform("org.junit:junit-bom:5.10.0")
+        testImplementation "org.junit.jupiter:junit-jupiter"
+    }
 
-test {
-    useJUnitPlatform()
+    tasks.withType(Test).configureEach {
+        useJUnitPlatform()
+    }
+
+    // Publish each module (artifactId = project.name)
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                from components.java
+            }
+        }
+    }
 }
